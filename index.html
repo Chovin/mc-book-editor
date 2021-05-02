@@ -222,7 +222,7 @@
         >
         <div>
             <button class="my2 center" v-on:click="newBook">New Book</button>
-            <!-- <button class="my2 center" v-on:click="copyBook">Copy Book</button> -->
+            <button class="my2 center" v-on:click="copyBook">Copy Book</button>
             <button class="my2 center" v-on:click="promptDelete">Delete Book</button>
         </div>
         <br>
@@ -386,6 +386,13 @@
                     })
                     this.select(this.books.length - 1)
                     localStorage.setItem("books", JSON.stringify(this.books))
+                },
+                copyBook() {
+                    oldBook = JSON.parse(JSON.stringify(this.book))
+                    this.newBook()
+                    oldBook.title = 'Copy of ' + oldBook.title
+                    this.book = oldBook
+                    this.save()
                 },
                 doDelete() {
                     this.deleteBook()  

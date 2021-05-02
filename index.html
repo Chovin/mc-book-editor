@@ -222,6 +222,7 @@
         >
         <div>
             <button class="my2 center" v-on:click="newBook">New Book</button>
+            <!-- <button class="my2 center" v-on:click="copyBook">Copy Book</button> -->
             <button class="my2 center" v-on:click="promptDelete">Delete Book</button>
         </div>
         <br>
@@ -255,13 +256,6 @@
     <script src="https://unpkg.com/vuex"></script>
     <script>
 
-        // https://www.codeproject.com/Articles/47941/How-to-limit-the-number-of-lines-and-characters-in
-        function getLines(txtArea){
-            var lineHeight = parseInt(txtArea.style.lineHeight.replace(/px/i,''));
-            var tr = txtArea.createRange();
-            return Math.ceil(tr.boundingHeight/lineHeight);
-        }
-
         var left = document.getElementById('left')
         var maxScrollHeight = left.scrollHeight
         var pageLineHight = parseInt(getComputedStyle(left).lineHeight)
@@ -273,14 +267,17 @@
             pages: [],
             }]
         }
+        var initialBook = parseInt(localStorage.getItem('booki'))
+        var initialPage = parseInt(localStorage.getItem('ipage'))
+
         const vueApp = new Vue({
             el: '#site',
             data: {
                 books: books,
-                booki: 0,
-                book: JSON.parse(JSON.stringify(books[0])),
+                booki: initialBook,
+                book: JSON.parse(JSON.stringify(books[initialBook])),
                 prompt: false,
-                page: 0,
+                page: initialPage,
                 loaded: false,
                 testPage: '',
             },
@@ -420,12 +417,17 @@
                     this.booki = i
                     this.book = JSON.parse(JSON.stringify(this.books[i]))
                     this.page = 0
+                    localStorage.setItem('booki', this.booki)
                 },
                 nextPage() {
-                    this.page += 2
+                    this.changePage(2)
                 },
                 prevPage() {
-                    this.page -= 2
+                    this.changePage(-2)
+                },
+                changePage(i) {
+                    this.page += i
+                    localStorage.setItem('ipage', this.page)
                 },
             },
             mounted() {

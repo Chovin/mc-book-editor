@@ -285,8 +285,8 @@
             pages: [],
             }]
         }
-        var initialBook = parseInt(localStorage.getItem('booki'))
-        var initialPage = parseInt(localStorage.getItem('ipage'))
+        var initialBook = parseInt(localStorage.getItem('booki') || 0)
+        var initialPage = parseInt(localStorage.getItem('ipage') || 0)
 
         const vueApp = new Vue({
             el: '#site',

@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+        integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w=="
+        crossorigin="anonymous" />
+    <style>
+        * {
+            font-family: 'Minecraft';
+            font-size: 17px;
+            line-height: 1em;
+        }
+        .site {
+            width: 600px;
+            position: relative;
+        }
+        .modal {
+            position: absolute;
+            z-index: 1;
+            top: 120px;
+            left: 0;
+            right: 0;
+            width: 200px;
+            border: 2px grey solid;
+            padding: .75em;
+            background: rgb(241 241 241 / 95%);
+            text-align: center;
+            margin: 0 auto;
+        }
+        .hide-till-load {
+            display: none;
+            margin-left: -1000%;
+            left: -100%;
+        }
+
+        .book {
+            position: relative;
+            width: 512px;
+            background-image: url('assets/book.png');
+            background-size: cover;
+            background-clip: padding-box;
+            padding: 15px;
+            padding-bottom: 33px;
+        }
+        .book textarea {
+            border: 2px solid transparent;
+            margin: 18px;
+            margin-top: 0px;
+            background: none;
+            padding-left: 4px;
+            padding-right: 4px;
+        }
+        .book textarea:focus {
+            border: 2px solid rgb(171, 171, 171, .8);
+            outline: none;
+        }
+        #left {
+            margin-left: 19px; /* 19 */
+            margin-right: 11px;
+        }
+        #test-page {
+            position: absolute;
+            left: -1000%;
+            color: transparent;
+        }
+
+        #book-list > div {
+            padding: 2px;
+            padding-left: 5px;
+        }
+        .selected-book {
+            background:rgba(225, 225, 225, 0.8);
+        }
+        #page-numbers {
+            padding: 0 2px;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+        }
+        .page-number, .pg-ctrl{
+            display: inline-block;
+            color: #B8A48A;
+            margin-top: 6px;
+        }
+
+        .pg-ctrl {
+            z-index: 50;
+            border: none;
+            /* width: 0; */
+            padding: 0;
+            margin: 0;
+            background: none;
+
+            position:absolute;
+            top: 50%;
+            margin: auto 7px;
+            margin-top: -12px;
+        }
+        .pg-ctrl > i {
+            font-size: 28px;
+        }
+        .pg-ctrl:focus {
+            color: white;
+        }
+        .pg-ctrl:active {
+            color: black;
+        }
+        .pg-ctrl:focus::before {
+            content: '';
+            z-index: -1;
+            width: 19px;
+            height: 19px;
+            position: absolute;
+            top: 4px;
+            left: -3px;
+            /* border: 1px solid red; */
+            background: rgb(171, 171, 171, .8);
+        }
+        .pg-ctrl-right {
+            right: 0;
+            margin-right: 21px;
+        }
+        .pg-ctrl-right:focus::before {
+            left: -5px;
+        }
+
+        #credits {
+            padding-left: 5px;
+            margin-top: 40px;
+            opacity: .6;
+            line-height: 1.25em;
+        }
+        #credits, #credits a {
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        .center {
+            display: block;
+            margin: 0 auto;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .page {
+            resize: none;
+            wdith: 20px;
+        }
+        .my1 {
+            margin-top: 4px;
+            margin-bottom: 4px;
+        }
+        .my2 {
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+        .my3 {
+            margin-top: 12px;
+            margin-bottom: 12px;
+        }
+        .my4 {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        .mt10 {
+            margin-top: 60px;
+        }
+        @font-face {
+            font-family: 'Minecraft';
+            src: url('assets/Minecraft.otf');
+        }
+    </style>
+</head>
+<body>
+    <div class="site center mt10" id="site">
+        <h1 class="text-center my4">Book Editor</h1>
+        <div class="book center">
+            <div id="page-numbers" class="hide-till-load" v-show="loaded">
+                <div class="page-number hide-till-load left-pn" v-show="loaded">Page {{ page + 1 }} of {{ displayMaxPage }}</div>
+                <div class="page-number hide-till-load right-pn" v-show="loaded">Page {{ page + 2 }} of {{ displayMaxPage }}</div>
+            </div>
+            
+            <div id="book-content">
+                <button class="pg-ctrl" v-show="page > 1" v-on:click="prevPage">
+                    <i v-show="loaded" class="fas fa-caret-left hide-till-load"></i>
+                </button>
+
+                <textarea rows="14" class="page" id="left" cols="19"
+                    :placeholder="book.pages.length === 0 ? '1234567891011121314112345  type' : ''" v-model="leftPage"></textarea>
+                <textarea rows="14" class="page" id="right" cols="19"
+                    :placeholder="book.pages.length === 0 ? '12345678910111213141here' : ''" v-model="rightPage"></textarea>
+                <textarea rows="14" class="page" id="test-page" cols="19" v-model="testPage" disabled></textarea>
+
+                <button class="pg-ctrl pg-ctrl-right" v-show="(page + 2) < 50" v-on:click="nextPage">
+                    <i v-show="loaded" class="fas fa-caret-right hide-till-load"></i>
+                </button>
+            </div>
+        </div>
+        <br/>
+        
+        <h3 class="text-center">Title</h3>
+        <input type="text" 
+            class="center animate__animated" 
+            placeholder="title" 
+            id="title-input"
+            v-model="title"
+        >
+        <div>
+            <button class="my2 center" v-on:click="save">Save Book</button>
+            <button class="my2 center" v-on:click="newBook">New Book</button>
+            <button class="my2 center" v-on:click="promptDelete">Delete Book</button>
+        </div>
+        <br>
+        
+        <h4 class="text-center">Saved Books</h4>
+        <div id="book-list" class="hide-till-load">
+            <div 
+                v-for="(b, i) in books" 
+                v-on:click="select(i)"
+                :class="i == booki ? 'selected-book' : ''"
+            >
+                {{ b.title || "Book & Quill" }}
+            </div>
+        </div>
+
+        <div id="credits">
+            Font by <a href="https://www.fontspace.com/minecraft-font-f28180" target="_blank">JDGraphics</a>
+            <br>
+            Book Graphic from Minecraft
+        </div>
+
+        <div class="modal hide-till-load" v-show="prompt" id="delete-prompt">
+            <h4>Are you sure?</h4>
+            <button class="my2" v-on:click="doDelete">Delete</button>
+            <button class="my2" v-on:click="cancelDelete">Cancel</button>
+        </div>
+
+    </div>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+    <script src="https://unpkg.com/vuex"></script>
+    <script>
+
+        // https://www.codeproject.com/Articles/47941/How-to-limit-the-number-of-lines-and-characters-in
+        function getLines(txtArea){
+            var lineHeight = parseInt(txtArea.style.lineHeight.replace(/px/i,''));
+            var tr = txtArea.createRange();
+            return Math.ceil(tr.boundingHeight/lineHeight);
+        }
+
+        var left = document.getElementById('left')
+        var maxScrollHeight = left.scrollHeight
+        var pageLineHight = parseInt(getComputedStyle(left).lineHeight)
+
+        var books = JSON.parse(localStorage.getItem('books'))
+        if (!books) {
+            books = [{
+            title: null,
+            pages: [],
+            }]
+        }
+        const vueApp = new Vue({
+            el: '#site',
+            data: {
+                books: books,
+                booki: 0,
+                book: JSON.parse(JSON.stringify(books[0])),
+                prompt: false,
+                page: 0,
+                loaded: false,
+                testPage: '',
+            },
+            computed: {
+                title: {
+                    get() {
+                        return this.book.title
+                    },
+                    set(v) {
+                        this.book.title = v
+                    }
+                },
+                displayMaxPage() {
+                    return Math.max(this.book.pages.length + this.book.pages.length % 2, this.page + 2)
+                },
+                leftPage: {
+                    get() {
+                        return this.getPage(this.page)
+                    },
+                    set(v) {
+                        this.setPage(this.page, v)
+                    }
+                },
+                rightPage: {
+                    get() {
+                        return this.getPage(this.page + 1)
+                    },
+                    set(v) {
+                        this.setPage(this.page + 1, v)
+                    }
+                },
+            },
+            methods: {
+                getPage(i) {
+                    if (i >= this.book.pages.length) {
+                        return ""
+                    }
+                    return this.book.pages[i]
+                },
+                setPage(i, v) {
+                    if (i%2) {
+                        el = document.getElementById('right')
+                    } else {
+                        el = document.getElementById('left')
+                    }
+                    v = this.limitPageText(el, v)
+                    if (i >= this.book.pages.length) {
+                        for (let j=this.book.pages.length; j<i; j++) {
+                            this.book.pages.splice(i, 0, '')
+                        }
+                    }
+                    this.book.pages.splice(i, 1, v)
+                },
+                limitPageText(el, v) {
+                    var sh = el.scrollHeight
+                    var charPerLine = el.cols //guess at how many characters
+                    this.testPage = v
+                    var testEl = document.getElementById('test-page');
+                    testEl.value = v
+                    if (sh > maxScrollHeight) {
+                        
+                        tries = 0
+                        while (true) {
+                            tries += 1
+                            var diff = testEl.scrollHeight - maxScrollHeight
+                            var linesOver = diff/pageLineHight
+                            var charactersOver = linesOver * charPerLine // guess
+
+                            // make a guess for the chopping point
+                            if (linesOver === 1) { // most often case. just typing
+                                guess = testEl.value.length - 1
+                            } else {
+                                guess = testEl.value.length - charactersOver
+                            }
+                            // test guess
+                            lowGuess = v.substr(0, guess)
+                            testEl.value = lowGuess
+                            if (testEl.scrollHeight > maxScrollHeight) {
+                                continue
+                            }
+                            highGuess = v.substr(0, guess + 1)
+                            testEl.value = highGuess
+                            if (testEl.scrollHeight === maxScrollHeight) { // took away too many characters
+                                charactersOver /= 2
+                                guess = testEl.value.length + charactersOver
+                                testEl.value = v.substr(0, guess)
+                                continue
+                            }
+                            break
+                        }
+                        v = lowGuess
+                    }
+                    
+                    return v
+                },
+                saveKeyPressed(e) {
+                    if (!(e.keyCode === 83 && (e.ctrlKey || e.metaKey))) {
+                        return;
+                    }
+
+                    e.preventDefault();
+                    this.save()
+                },
+                save() {
+                    if (!this.book.title) {                     
+                        document.getElementById('title-input').classList.toggle('animate__shakeX');
+                        setTimeout(() => {
+                            document.getElementById('title-input').classList.remove('animate__shakeX');
+                        }, 300);
+                        return;
+                    }
+                    Vue.set(this.books, this.booki, this.book)
+                    localStorage.setItem("books", JSON.stringify(this.books))
+                },
+                newBook() {
+                    this.books.splice(this.books.length, 0, {
+                        title: null,
+                        pages: [],
+                    })
+                    this.select(this.books.length - 1)
+                    localStorage.setItem("books", JSON.stringify(this.books))
+                },
+                doDelete() {
+                    this.deleteBook()  
+                    this.prompt = false
+                },
+                deleteBook() {
+                    this.books.splice(this.booki, 1)
+                    if (this.booki == 0) {
+                        // first book was deleted, select next one
+                        if (this.books.length === 0) {
+                            // last book was deleted
+                            this.newBook()
+                        } else {
+                            this.select(this.booki)
+                        }
+                    } else {
+                        // select previous book
+                        this.select(this.booki - 1)
+                    }
+                    localStorage.setItem("books", JSON.stringify(this.books))
+                },
+                promptDelete() {
+                    this.prompt = true
+                },
+                cancelDelete() {
+                    this.prompt = false
+                },
+                select(i) {
+                    this.booki = i
+                    this.book = JSON.parse(JSON.stringify(this.books[i]))
+                    this.page = 0
+                },
+                nextPage() {
+                    this.page += 2
+                },
+                prevPage() {
+                    this.page -= 2
+                },
+            },
+            mounted() {
+                // just cause I loaded Vue after, it appears on first render,
+                // so hiding it at first and unhiding here
+                // note, element needs to use v-show, not v-if cause then it wouldn't exist
+                [...document.getElementsByClassName('hide-till-load')].forEach(element => {
+                    element.classList.remove('hide-till-load');
+                });
+                this.loaded = true
+
+                document.addEventListener("keydown", this.saveKeyPressed);
+            },
+            beforeDestroy() {
+                document.removeEventListener("keydown", this.saveKeyPressed);
+            }
+        })
+    </script>
+</body>
+</html>

@@ -72,8 +72,16 @@
         #book-list > div {
             padding: 2px;
             padding-left: 5px;
+            cursor: pointer;
+            background: white;
         }
-        .selected-book {
+        #book-list > div:hover {
+            filter: brightness(98%);
+        }
+        #book-list > div:hover > div {
+            transform: translate(-1px, -2px)
+        }
+        #book-list .selected-book {
             background:rgba(225, 225, 225, 0.8);
         }
         #page-numbers {
@@ -228,15 +236,22 @@
         <br>
         
         <h4 class="text-center">Saved Books</h4>
-        <div id="book-list" class="hide-till-load">
+        <draggable 
+            id="book-list" 
+            class="hide-till-load"
+            v-model="books"
+            @start="tagToMove" @end="correctBooki"
+        >
             <div 
                 v-for="(b, i) in books" 
                 v-on:click="select(i)"
                 :class="i == booki ? 'selected-book' : ''"
             >
-                {{ b.title || "Book & Quill" }}
+                <div>
+                    {{ b.title || "Book & Quill" }}
+                </div>
             </div>
-        </div>
+        </draggable>
 
         <div id="credits">
             Font by <a href="https://www.fontspace.com/minecraft-font-f28180" target="_blank">JDGraphics</a>
@@ -254,6 +269,9 @@
     <!-- <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script> -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
     <script src="https://unpkg.com/vuex"></script>
+    <script src="//cdn.jsdelivr.net/npm/sortablejs@1.8.4/Sortable.min.js"></script>
+    <!-- CDNJS :: Vue.Draggable (https://cdnjs.com/) -->
+    <script src="//cdnjs.cloudflare.com/ajax/libs/Vue.Draggable/2.20.0/vuedraggable.umd.min.js"></script>
     <script>
 
         var left = document.getElementById('left')
@@ -420,11 +438,14 @@
                 cancelDelete() {
                     this.prompt = false
                 },
-                select(i) {
+                changeBookIndex(i) {
                     this.booki = i
+                    localStorage.setItem('booki', this.booki)
+                },
+                select(i) {
                     this.book = JSON.parse(JSON.stringify(this.books[i]))
                     this.page = 0
-                    localStorage.setItem('booki', this.booki)
+                    this.changeBookIndex(i)
                 },
                 nextPage() {
                     this.changePage(2)
@@ -435,6 +456,21 @@
                 changePage(i) {
                     this.page += i
                     localStorage.setItem('ipage', this.page)
+                },
+                tagToMove() {
+                    this.books.forEach((b, i) => {
+                        Vue.set(b, 'id', i)
+                    });
+                },
+                correctBooki() {
+                    var changed = false
+                    this.books.forEach((b, i) => {
+                        if (b.id === this.booki && !changed) {
+                            this.changeBookIndex(i)
+                            changed = true
+                        }
+                        Vue.delete(b, 'id');
+                    })
                 },
             },
             mounted() {

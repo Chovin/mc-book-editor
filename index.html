@@ -221,7 +221,6 @@
             v-model="title"
         >
         <div>
-            <button class="my2 center" v-on:click="save">Save Book</button>
             <button class="my2 center" v-on:click="newBook">New Book</button>
             <button class="my2 center" v-on:click="promptDelete">Delete Book</button>
         </div>
@@ -334,6 +333,7 @@
                         }
                     }
                     this.book.pages.splice(i, 1, v)
+                    this.save()
                 },
                 limitPageText(el, v) {
                     var sh = el.scrollHeight
@@ -377,30 +377,9 @@
                     
                     return v
                 },
-                saveKeyPressed(e) {
-                    if (!(e.keyCode === 83 && (e.ctrlKey || e.metaKey))) {
-                        return;
-                    }
-
-                    e.preventDefault();
-                    this.save()
-                },
                 save() {
-                    if (!this.book.title) {                     
-                        document.getElementById('title-input').classList.toggle('animate__shakeX');
-                        setTimeout(() => {
-                            document.getElementById('title-input').classList.remove('animate__shakeX');
-                        }, 300);
-                        return;
-                    }
                     Vue.set(this.books, this.booki, this.book)
                     localStorage.setItem("books", JSON.stringify(this.books))
-                    // feedback
-                    selected = document.querySelector('.selected-book')
-                    selected.classList.toggle('animate_ext_hop')
-                    setTimeout(() => {
-                        selected.classList.remove('animate_ext_hop');
-                    }, 100);
 
                 },
                 newBook() {
@@ -458,11 +437,7 @@
                 });
                 this.loaded = true
 
-                document.addEventListener("keydown", this.saveKeyPressed);
             },
-            beforeDestroy() {
-                document.removeEventListener("keydown", this.saveKeyPressed);
-            }
         })
     </script>
 </body>

@@ -159,6 +159,34 @@
             left: -5px;
         }
 
+
+        #shareUrlContainer {
+            display: flex;
+            justify-content: center;
+            transition: all .5s linear, transform .1s linear;
+            margin-bottom: 0px;
+            height: 0px;
+            opacity: 0;
+            transform: scaleY(0);
+        }
+        #shareUrlContainer input {
+            outline: none;
+        }
+        #shareUrlContainer.grow {
+            height: auto;
+            margin-top: inherit;
+            opacity: 1;
+            margin-bottom: 8px;
+            transform: scaleY(1);
+        }
+        #shareUrlContainer+button {
+            margin-top: 0px;
+        }
+        .shareBox {
+            margin-right: 7px;
+        }
+
+
         #credits {
             padding-left: 5px;
             margin-top: 40px;
@@ -180,10 +208,17 @@
         .text-center {
             text-align: center;
         }
+        .text-vcenter {
+            vertical-align: center;
+        }
 
         .page {
             resize: none;
             wdith: 20px;
+        }
+
+        .mt0 {
+            margin-top: 0;
         }
 
         .my1 {
@@ -210,6 +245,10 @@
             margin-top: 60px;
         }
 
+        .pt10 {
+            padding-top: 68px;
+        }
+
         @font-face {
             font-family: 'Minecraft';
             src: url('assets/Minecraft.otf');
@@ -222,10 +261,28 @@
         .selected-book.animate_ext_hop {
             transform: translate(0, -3px);
         }
+
+        #notif-banner {
+            transition: transform .1s ease-in-out;
+            text-align: center;
+            position:absolute;
+            height: auto;
+            top: 0;
+            border: 2px grey dotted;
+            border-top: none;
+            width: 500px;
+            margin: 0 50px;
+            margin-left: -250px;
+            left: 50%;
+            transform: translateY(-3.5em);
+        }
+        #notif-banner.notify {
+            transform: translateY(0em);
+        }
     </style>
 </head>
 
-<body>
+<body class="mt0">
     <!-- https://tholman.com/github-corners/ -->
     <a href="https://github.com/Chovin/mc-book-editor" class="github-corner" aria-label="View source on GitHub"><svg
             width="80" height="80" viewBox="0 0 250 250"
@@ -272,8 +329,15 @@
         }
     </style>
 
-    <div class="site center mt10" id="site">
-        <h1 class="text-center my4">Book Editor</h1>
+    <div class="site center" id="site">
+        <div class="hide-till-load">
+            <div id="notif-banner" :class="'center ' + (notifying? 'notify': '')">
+                <p class="text-vcenter">
+                    {{ notification }}
+                </p>
+            </div>
+        </div>
+        <h1 class="text-center pt10 mt0">Book Editor</h1>
         <div class="book center">
             <div id="placeholder-page-numbers" v-show="!loaded">
                 <div class="page-number left-pn" v-show="!loaded">Page 1 of
@@ -313,7 +377,13 @@
         <div>
             <button class="my2 center" v-on:click="newBook">New Book</button>
             <button class="my2 center" v-on:click="copyBook">Copy Book</button>
-            <button class="my2 center" v-on:click="shareBook">Share Book <i class="far fa-copy"></i></button>
+            <button class="my2 center" v-on:click="shareBook" id="share-btn">Share Book 
+                    <i class="fas fa-spinner fa-pulse hide-till-load" v-show="shareLoading"></i>
+            </button>
+            <div id="shareUrlContainer" :class="urlToCopy ? 'grow' : ''">
+                <input type="text" class="shareBox" v-model="urlToCopy" id="copy-el" readonly>
+                <button v-on:click="writeClipboard" :disabled="!urlToCopy"><i class="far fa-copy"></i></button>
+            </div>
             <button class="my2 center" v-on:click="promptDelete">Delete Book</button>
         </div>
         <br>
@@ -356,6 +426,20 @@
     <!-- <script src="https://cdn.jsdelivr.net/npm/nanoid/nanoid.js" crossorigin="anonymous" type="module"></script> -->
     <script type="module">
         import { nanoid } from 'https://cdn.jsdelivr.net/npm/nanoid/nanoid.js'
+
+        function copy(text) {
+            var el = document.createElement('textarea')
+            el.value = text
+            el.focus()
+            el.select()
+            document.execCommand("copy")
+        }
+
+        function copyEl(el) {
+            el.focus()
+            el.select()
+            document.execCommand("copy")
+        }
 
         class UploadServer {
             constructor() {
@@ -436,6 +520,12 @@
                 loaded: false,
                 testPage: '',
                 server: new UploadJsonBlob(),
+                urlToCopy: null,
+                shareFadeTimeout: null,
+                notification: '\xa0',
+                notifying: false,
+                notificationTimeout: null,
+                shareLoading: false
             },
             computed: {
                 title: {
@@ -626,8 +716,15 @@
                     }
                 },
                 async shareBook() {
+                    this.shareLoading = true
                     var url = await this.uploadBook()
-                    this.writeClipboard(url)
+                    this.shareLoading = false
+                    this.urlToCopy = url
+                    clearTimeout(this.shareFadeTimeout)
+                    this.shareFadeTimeout = setTimeout(() => {
+                        this.urlToCopy = null;
+                    }, 5000);
+                    // this.writeClipboard(url)
                     // TODO: prompt
                 },
                 async uploadBook() {
@@ -648,34 +745,52 @@
                         this.cleanBook(b)  // adjusts bid if book was dirty
                         if (b.bid === book.bid) {
                             // already have book, don't do anything
-                            throw new ReferenceError('Book is already in library unchanged.')
+                            throw new ReferenceError('Book is already in library unchanged (bid: '+b.bid+')')
                             return
                         }
                     }
                     return book
                 },
-                writeClipboard(v) {
-                    console.log(v)
+                writeClipboard() {
+                    copyEl(document.getElementById('copy-el'))
+                    this.notify('Copied!');
                 },
                 unhideUi() {
-                    [...document.getElementsByClassName('hide-till-load')].forEach(element => {
+                    [...document.querySelectorAll('.hide-till-load')].forEach(element => {
                         element.classList.remove('hide-till-load');
                     });
-                }
+                },
+                notify(text) {
+                    this.notification = text
+                    this.notifying = true
+                    clearTimeout(this.notificationTimeout)
+                    this.notificationTimeout = setTimeout(() => {
+                        this.notifying = false
+                    }, 4000);
+                },
             },
             async mounted() {
                 if (bookToLoad) {
+                    var book
                     try {
                         console.log('downloading')
-                        var book = await this.downloadBook(bookToLoad)
+                        book = await this.downloadBook(bookToLoad)
                         this.addBook(book)
                         console.log('done')
                     } catch (e) {
                         console.log(e)
                         if (e instanceof ReferenceError) { // duplicate book
-                            console.log('duplicate book')
+                            var errParts = e.message.split(' (bid: ');
+                            var bid = errParts[1].split(')')[0]
+                            this.notify(errParts[0])
+                            for(let i=0; i<this.books.length; i++) {
+                                if (this.books[i].bid == bid) {
+                                    this.select(i);
+                                    break;
+                                }
+                            }
                         } else if (e instanceof RangeError) { // server error (book likely deleted)
-                            console.log('book not found')
+                            this.notify('Book not found. Likely stale and was deleted.')
                         }
                     }
                 }

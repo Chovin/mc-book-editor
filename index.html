@@ -178,7 +178,7 @@
         }
         #shareUrlContainer.grow {
             height: auto;
-            margin-top: inherit;
+            margin-top: 0px;
             opacity: 1;
             margin-bottom: 8px;
             transform: scaleY(1);
@@ -677,6 +677,7 @@
                     })
                     this.select(this.books.length - 1)
                     localStorage.setItem("books", JSON.stringify(this.books))
+                    this.notify('New Book created!')
                 },
                 addBook(book) {
                     this.newBook()
@@ -688,10 +689,12 @@
                     oldBook.title = 'Copy of ' + oldBook.title
                     this.cleanBook(oldBook, true)
                     this.addBook(oldBook)
+                    this.notify('Book copied!')
                 },
                 doDelete() {
                     this.deleteBook()  
                     this.prompt = false
+                    this.notify('Book deleted!')
                 },
                 deleteBook() {
                     this.books.splice(this.booki, 1)
@@ -813,12 +816,10 @@
                 if (bookToLoad) {
                     var book
                     try {
-                        console.log('downloading')
                         book = await this.downloadBook(bookToLoad)
                         this.addBook(book)
-                        console.log('done')
+                        this.notify('Book downloaded!')
                     } catch (e) {
-                        console.log(e)
                         if (e instanceof ReferenceError) { // duplicate book
                             var errParts = e.message.split(' (bid: ');
                             var bid = errParts[1].split(')')[0]

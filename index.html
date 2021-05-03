@@ -313,6 +313,7 @@
         <div>
             <button class="my2 center" v-on:click="newBook">New Book</button>
             <button class="my2 center" v-on:click="copyBook">Copy Book</button>
+            <button class="my2 center" v-on:click="shareBook">Share Book <i class="far fa-copy"></i></button>
             <button class="my2 center" v-on:click="promptDelete">Delete Book</button>
         </div>
         <br>
@@ -339,13 +340,66 @@
         </div>
 
     </div>
+    <script>
+        // grab book id and remove from url to minimize reloading of it
+        var pathObj = new URL(document.location.href)
+        var rootPath = pathObj.origin + pathObj.pathname
+        var bookToLoad = new URLSearchParams(document.location.search).get('bid');
+        window.history.replaceState({}, document.title, pathObj.pathname)
+    </script>
     <!-- <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script> -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
     <script src="https://unpkg.com/vuex"></script>
     <script src="//cdn.jsdelivr.net/npm/sortablejs@1.8.4/Sortable.min.js"></script>
     <!-- CDNJS :: Vue.Draggable (https://cdnjs.com/) -->
     <script src="//cdnjs.cloudflare.com/ajax/libs/Vue.Draggable/2.20.0/vuedraggable.umd.min.js"></script>
-    <script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/nanoid/nanoid.js" crossorigin="anonymous" type="module"></script> -->
+    <script type="module">
+        import { nanoid } from 'https://cdn.jsdelivr.net/npm/nanoid/nanoid.js'
+
+        class UploadServer {
+            constructor() {
+                throw new Error('NotImplemented')
+            }
+
+            async upload(data) {
+                throw new Error('NotImplemented')
+                return key
+            }
+
+            async download(key) {
+                throw new Error('NotImplemented')
+                return data
+            }
+        }
+
+        class UploadJsonBlob {
+            constructor() {
+                this.api = 'https://jsonblob.com/api/jsonBlob'
+            }
+
+            async upload(data) {
+                var r = await fetch(this.api, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {'Content-Type': 'application/json'}
+                })
+                var url = r.headers.get('Location')
+                var parts = url.split('/')
+                // slight obsification to avoid confusing users
+                return parts[parts.length - 1]
+                
+            }
+
+            async download(key) {
+                var r = await fetch(this.api + '/' + key)
+                if (r.status !== 200) {
+                    return null
+                }
+                return await r.json()
+            }
+        }
+        
 
         var left = document.getElementById('left')
         var maxScrollHeight = left.scrollHeight
@@ -354,9 +408,19 @@
         var books = JSON.parse(localStorage.getItem('books'))
         if (!books) {
             books = [{
-            title: null,
-            pages: [],
+                title: null,
+                pages: [],
+                bid: nanoid(),
+                clean: true,
             }]
+        } else {
+            books.forEach(b => {
+                // grandfathering
+                if (!b.hasOwnProperty('bid')) {
+                    b.bid = nanoid()
+                    b.clean = true
+                }
+            });
         }
         var initialBook = parseInt(localStorage.getItem('booki') || 0)
         var initialPage = parseInt(localStorage.getItem('ipage') || 0)
@@ -371,6 +435,7 @@
                 page: initialPage,
                 loaded: false,
                 testPage: '',
+                server: new UploadJsonBlob(),
             },
             computed: {
                 title: {
@@ -378,6 +443,7 @@
                         return this.book.title
                     },
                     set(v) {
+                        this.book.clean = false
                         this.book.title = v
                         this.save()
                     }
@@ -410,6 +476,7 @@
                     return this.book.pages[i]
                 },
                 setPage(i, v) {
+                    var el
                     if (i%2) {
                         el = document.getElementById('right')
                     } else {
@@ -422,6 +489,7 @@
                         }
                     }
                     this.book.pages.splice(i, 1, v)
+                    this.book.clean = false
                     this.save()
                 },
                 limitPageText(el, v) {
@@ -432,12 +500,11 @@
                     testEl.value = v
                     if (sh > maxScrollHeight) {
                         
-                        tries = 0
                         while (true) {
-                            tries += 1
                             var diff = testEl.scrollHeight - maxScrollHeight
                             var linesOver = diff/pageLineHight
                             var charactersOver = linesOver * charPerLine // guess
+                            var guess;
 
                             // make a guess for the chopping point
                             if (linesOver === 1) { // most often case. just typing
@@ -446,12 +513,12 @@
                                 guess = testEl.value.length - charactersOver
                             }
                             // test guess
-                            lowGuess = v.substr(0, guess)
+                            var lowGuess = v.substr(0, guess)
                             testEl.value = lowGuess
                             if (testEl.scrollHeight > maxScrollHeight) {
                                 continue
                             }
-                            highGuess = v.substr(0, guess + 1)
+                            var highGuess = v.substr(0, guess + 1)
                             testEl.value = highGuess
                             if (testEl.scrollHeight === maxScrollHeight) { // took away too many characters
                                 charactersOver /= 2
@@ -475,16 +542,22 @@
                     this.books.splice(this.books.length, 0, {
                         title: null,
                         pages: [],
+                        bid: nanoid(),
+                        clean: true,
                     })
                     this.select(this.books.length - 1)
                     localStorage.setItem("books", JSON.stringify(this.books))
                 },
-                copyBook() {
-                    oldBook = JSON.parse(JSON.stringify(this.book))
+                addBook(book) {
                     this.newBook()
-                    oldBook.title = 'Copy of ' + oldBook.title
-                    this.book = oldBook
+                    this.book = book
                     this.save()
+                },
+                copyBook() {
+                    var oldBook = JSON.parse(JSON.stringify(this.book))
+                    oldBook.title = 'Copy of ' + oldBook.title
+                    this.cleanBook(oldBook, true)
+                    this.addBook(oldBook)
                 },
                 doDelete() {
                     this.deleteBook()  
@@ -546,14 +619,70 @@
                         Vue.delete(b, 'id');
                     })
                 },
+                cleanBook(book, force=false) {
+                    if (!book.clean || force) {
+                        book.bid = nanoid()
+                        book.clean = true
+                    }
+                },
+                async shareBook() {
+                    var url = await this.uploadBook()
+                    this.writeClipboard(url)
+                    // TODO: prompt
+                },
+                async uploadBook() {
+                    this.cleanBook(this.book)
+                    var key = await this.server.upload(this.book)
+                    var url = new URL(rootPath)
+                    url.searchParams.set('bid', key)
+                    return url.href
+                },
+                async downloadBook(key) {
+                    var book = await this.server.download(key)
+                    if (!book) {  // likely 404, was deleted after awhile
+                        throw new RangeError('Book not found. Might have gotten stale and been deleted.')
+                        return
+                    }
+                    for (let i=0; i<this.books.length; i++) {
+                        var b = this.books[i]
+                        this.cleanBook(b)  // adjusts bid if book was dirty
+                        if (b.bid === book.bid) {
+                            // already have book, don't do anything
+                            throw new ReferenceError('Book is already in library unchanged.')
+                            return
+                        }
+                    }
+                    return book
+                },
+                writeClipboard(v) {
+                    console.log(v)
+                },
+                unhideUi() {
+                    [...document.getElementsByClassName('hide-till-load')].forEach(element => {
+                        element.classList.remove('hide-till-load');
+                    });
+                }
             },
-            mounted() {
+            async mounted() {
+                if (bookToLoad) {
+                    try {
+                        console.log('downloading')
+                        var book = await this.downloadBook(bookToLoad)
+                        this.addBook(book)
+                        console.log('done')
+                    } catch (e) {
+                        console.log(e)
+                        if (e instanceof ReferenceError) { // duplicate book
+                            console.log('duplicate book')
+                        } else if (e instanceof RangeError) { // server error (book likely deleted)
+                            console.log('book not found')
+                        }
+                    }
+                }
                 // just cause I loaded Vue after, it appears on first render,
                 // so hiding it at first and unhiding here
                 // note, element needs to use v-show, not v-if cause then it wouldn't exist
-                [...document.getElementsByClassName('hide-till-load')].forEach(element => {
-                    element.classList.remove('hide-till-load');
-                });
+                this.unhideUi()
                 this.loaded = true
 
             },

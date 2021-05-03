@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>MC Book Editor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
         integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w=="
@@ -159,6 +159,10 @@
             left: -5px;
         }
 
+        .input-label {
+            margin: 12px 0;
+        }
+
 
         #shareUrlContainer {
             display: flex;
@@ -205,6 +209,13 @@
             margin: 0 auto;
         }
 
+        div:hover>div>.lighter-font-on-hover {
+            color:rgb(183 183 178);
+        }
+        .lighter-font-on-hover {
+            color: transparent;
+        }
+
         .text-center {
             text-align: center;
         }
@@ -219,6 +230,10 @@
 
         .mt0 {
             margin-top: 0;
+        }
+
+        .mt5 {
+            margin-top: 25px;
         }
 
         .my1 {
@@ -372,9 +387,22 @@
         </div>
         <br />
 
-        <h3 class="text-center">Title</h3>
-        <input type="text" class="center animate__animated" placeholder="title" id="title-input" v-model="title">
-        <div>
+        <h3 class="text-center input-label">Title</h3>
+        <input type="text" 
+            class="center text-center animate__animated" 
+            placeholder="Book & Quill" 
+            id="title-input" v-model="title"
+            maxlength="16"
+        >
+        <h3 class="text-center input-label">Author</h3>
+        <!-- should actually be dimension bounded also --> 
+        <input type="text" 
+            class="center text-center" 
+            placeholder="Unknown Author" 
+            id="author-input" v-model="author"
+            maxlength="20" 
+        >
+        <div class="mt5">
             <button class="my2 center" v-on:click="newBook">New Book</button>
             <button class="my2 center" v-on:click="copyBook">Copy Book</button>
             <button class="my2 center" v-on:click="shareBook" id="share-btn">Share Book 
@@ -392,7 +420,7 @@
         <draggable id="book-list" class="hide-till-load" v-model="books" @start="tagToMove" @end="correctBooki">
             <div v-for="(b, i) in books" v-on:click="select(i)" :class="i == booki ? 'selected-book' : ''">
                 <div>
-                    {{ b.title || "Book & Quill" }}
+                    {{ b.title || "Book & Quill" }}<span class="lighter-font-on-hover"> - {{ b.author || "Unknown Author" }}</span>
                 </div>
             </div>
         </draggable>
@@ -493,6 +521,7 @@
         if (!books) {
             books = [{
                 title: null,
+                author: null,
                 pages: [],
                 bid: nanoid(),
                 clean: true,
@@ -535,6 +564,16 @@
                     set(v) {
                         this.book.clean = false
                         this.book.title = v
+                        this.save()
+                    }
+                },
+                author: {
+                    get() {
+                        return this.book.author
+                    },
+                    set(v) {
+                        this.book.clean = false
+                        this.book.author = v
                         this.save()
                     }
                 },
@@ -631,6 +670,7 @@
                 newBook() {
                     this.books.splice(this.books.length, 0, {
                         title: null,
+                        author: null,
                         pages: [],
                         bid: nanoid(),
                         clean: true,
